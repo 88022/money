@@ -584,8 +584,11 @@ function importData(el){
       let add = 0, upd = 0;
       for (const n of d.envelopes) {
         const ex = S.envelopes.find(e => e.name.trim().toLowerCase() === n.name.trim().toLowerCase());
-        if (ex) { Object.assign(ex, {monthly: n.monthly, from: n.from, target: n.target || ex.target, due: n.due || ex.due}); upd++; }
-        else { S.envelopes.push({id: uid(), amount: 0, ...n}); add++; }
+        if (ex) {
+          Object.assign(ex, {monthly: n.monthly ?? ex.monthly, from: n.from ?? ex.from, target: n.target || ex.target, due: n.due || ex.due});
+          if (n.amount !== undefined && num(n.amount) !== num(ex.amount)) { log(`Ребалансировка «${ex.name}»: ${rub(ex.amount)} → ${rub(n.amount)}`, 0); ex.amount = num(n.amount); }
+          upd++;
+        } else { S.envelopes.push({id: uid(), amount: 0, ...n, amount: num(n.amount || 0)}); if (n.amount) log(`Новый конверт «${n.name}»: ${rub(n.amount)}`, 0); add++; }
       }
       save(); render(); toast(`Конверты: добавлено ${add}, обновлено ${upd}`); return;
     }
