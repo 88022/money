@@ -183,6 +183,7 @@ function home(){
     <button onclick="opFood()"><b>🛒</b>Перевёл на еду</button>
     <button onclick="opSpend()"><b>−</b>Расход</button>
     <button onclick="opInterest()"><b>%</b>Проценты</button>
+    <button onclick="opCashback()"><b>↺</b>Кэшбэк</button>
     <button onclick="opTake()"><b>↓</b>Снял с кредитки</button>
     <button onclick="opRepay()"><b>↑</b>Погасил кредитку</button>
     <button onclick="opMin()"><b>⇡</b>Мин. платёж</button>
@@ -333,6 +334,28 @@ function opInterest(){
     const s = num(v.s); if (!s) return false;
     S.balance += s; log("Проценты " + (v.b || ""), s);
   });
+}
+function opCashback(){
+  const where = [["sav", "На накопительный / дебетовую (свободные деньги)"], ...S.cards.map(c => ["card:" + c.id, `На кредитку «${c.name}» — уменьшит долг`]),
+                 ...S.envelopes.map(e => ["env:" + e.id, `На накопительный → в конверт «${e.name}»`])];
+  sheet("Пришёл кэшбэк", inp("s", "Сумма", "", "num") + sel("w", "Куда пришёл", where, "sav") + inp("t", "С какой карты / за что (необязательно)", ""), v => {
+    const s = num(v.s); if (!s) return false;
+    applyCashback(s, v.w, v.t);
+    toast("Кэшбэк " + rub(s) + " записан");
+  }, "Записать");
+}
+function applyCashback(s, w, t){
+  const note = t ? " — " + t : "";
+  if (w.startsWith("card:")) {
+    const c = S.cards.find(x => x.id === w.slice(5));
+    c.debt = Math.round((num(c.debt) - s) * 100) / 100;
+    log(`Кэшбэк на «${c.name}»${note} (долг меньше)`, 0);
+  } else {
+    S.balance += s;
+    const e = w.startsWith("env:") ? S.envelopes.find(x => x.id === w.slice(4)) : null;
+    if (e) e.amount = num(e.amount) + s;
+    log("Кэшбэк" + (e ? ` → «${e.name}»` : "") + note, s);
+  }
 }
 function opBalance(){
   sheet("Сверка с банком", inp("s", "Точный остаток на накопительном", String(S.balance).replace(".", ","), "num") +
@@ -507,16 +530,24 @@ function findEnv(t){
   return best;
 }
 function parseQuick(q){
-  const raw = q.trim(); if (!raw) return null;
+  let raw = q.trim(); if (!raw) return null;
+  // название карты с цифрой («райф 1») не должно попасть в сумму — вырезаем его до поиска суммы
+  const c0 = findCard(raw);
+  const cardTxt = c0 ? (raw.match(new RegExp(c0.name.replace(/\s+/g, "").split("").map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s\\-]*"), "i")) || [""])[0] : "";
+  const rawNoCard = cardTxt ? raw.replace(cardTxt, " ") : raw;
   // сумма — последнее число; пробелы внутри допускаются только как разделители тысяч («73 950», «1 000 000»)
-  const m = raw.match(/(\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:р|₽|руб\.?|рублей)?\s*$/i);
+  const m = rawNoCard.match(/(\d{1,3}(?:[ \u00a0]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(?:р|₽|руб\.?|рублей)?\s*$/i);
   const amount = m ? num(m[1]) : 0;
-  const text = (m ? raw.replace(m[0], " ") : raw).trim();
+  const text = (m ? rawNoCard.replace(m[0], " ") : rawNoCard).trim() + (cardTxt ? " " + cardTxt : "");
   const t = text.toLowerCase().replace(/ё/g, "е");
   const has = re => re.test(t);
   if (has(/^(аванс)/)) return {kind: "income", sub: "adv", amount, label: `Аванс ${rub(amount)} → разложить по конвертам`};
   if (has(/^(зарплата|зп|получка)/)) return {kind: "income", sub: "sal", amount, label: `Зарплата ${rub(amount)} → разложить по конвертам`};
   if (has(/^(доход|пришло|пришли|вернули|\+)/)) return {kind: "income", sub: "other", amount, text, label: `Доход ${rub(amount)} на накопительный`};
+  if (has(/^(кэшбэк|кешбэк|кэшбек|кешбек|cashback|кб)/)) {
+    const card = findCard(t);
+    return {kind: "cashback", card, amount, label: card ? `Кэшбэк ${rub(amount)} на «${card.name}» — долг уменьшится` : `Кэшбэк ${rub(amount)} в свободные деньги`};
+  }
   if (has(/^(проценты|процент|%)/)) return {kind: "interest", amount, label: `Проценты ${rub(amount)} на накопительный`};
   if (has(/^(сверка|остаток|баланс)/)) return {kind: "bal", amount, label: `Точный остаток накопительного: ${rub(amount)}`};
   if (has(/^(досрочно|досрочка)/)) return {kind: "prepay", amount, label: `Досрочно в кредит ${rub(amount)} с накопительного`};
@@ -539,6 +570,7 @@ function applyQuick(r){
       if (r.sub !== "other") { const sh = shares(r.sub), tot = sh.reduce((a, x) => a + x[1], 0); sh.forEach(([e, a]) => e.amount = num(e.amount) + a); log(`${name}: в конверты ${rub(tot)}, свободно ${rub(s - tot)}`, 0); }
       break; }
     case "interest": S.balance += s; log("Проценты", s); break;
+    case "cashback": applyCashback(s, r.card ? "card:" + r.card.id : "sav", ""); break;
     case "bal": { const d = s - S.balance; S.balance = s; if (Math.abs(d) > 0.004) log("Сверка остатка", d); break; }
     case "prepay": S.loan.principal = Math.max(0, num(S.loan.principal) - s); S.balance -= s; log(S.loan.name + ": досрочно", -s); break;
     case "loan": {
