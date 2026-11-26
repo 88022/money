@@ -266,7 +266,9 @@ function opMore(){
   el.innerHTML = `<div class="grab"></div><div class="sbar"><span></span><button type="button" class="tbtn b" onclick="closeSheet()">Закрыть</button></div><h3>Другие действия</h3>
   <div class="card">${it("opFood()", "cart", "Перевёл на еду")}${it("opMin()", "min", "Минимальный платёж по кредитке")}${it("opLoanPaid()", "cash", "Платёж по кредиту")}${it("opPrepay()", "bolt", "Досрочно в кредит")}</div>
   <div class="card">${it("opInterest()", "pct", "Пришли проценты")}${it("opCashback()", "back", "Пришёл кэшбэк")}${it("opIncome('other')", "plus", "Другой доход")}</div>
-  <div class="card">${it("opEnvMove()", "tray", "Отложить в конверт")}${it("opBalance()", "check", "Сверка с банком")}</div>`;
+  <div class="card">${it("opEnvMove()", "tray", "Отложить в конверт")}${it("opBalance()", "check", "Сверка с банком")}</div>
+  <div class="card">${it("exportData()", "up", "Отправить данные в бот")}</div>
+  <div class="hint">Откроется «Поделиться» → Telegram → ваш бот с ветками. Бот запомнит данные, и Claude будет видеть вашу текущую ситуацию.</div>`;
   document.getElementById("sheet").classList.add("on");
 }
 function cards(){
