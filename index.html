@@ -226,55 +226,48 @@ function render(){
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === tab));
 }
 function home(){
-  const c = calc(), ev = events(14);
-  const freeCls = c.free < 0 ? "neg" : "pos";
+  const c = calc(), ev = events(7).slice(0, 5);
+  const line = (t, v, go_, sub) => v ? `<div class="row${go_ ? " tap" : ""}"${go_ ? ` onclick="${go_}"` : ""}><div class="l">${t}${sub ? `<small>${sub}</small>` : ""}</div><div class="r">${rub(v)}</div></div>` : "";
   return `<h1>Мои деньги</h1>
   <form class="quick" onsubmit="event.preventDefault(); quickGo(this.q.value)">
-    <input name="q" placeholder="Быстрая запись: еда 8000, косметика 3500…" autocomplete="off" enterkeyhint="go">
+    <input name="q" placeholder="Записать: еда 800, аванс 73950…" autocomplete="off" enterkeyhint="go">
     <button class="btn" aria-label="Записать">→</button>
   </form>
   <div class="card hero">
-    <div class="lbl">${c.free < 0 ? "Не хватает с учётом трат и конвертов" : "Можно тратить"}</div>
-    <div class="big ${freeCls}">${rub(c.free < 0 ? -c.free : c.free)}</div>
-    <div class="muted">накопительный минус кредитки, траты и конверты. Кредит гасится частями из зарплаты</div>
+    <div class="lbl">Свободные деньги</div>
+    <div class="big ${c.free < 0 ? "neg" : "pos"}">${rub(c.free)}</div>
+    <div class="muted">${c.free < 0
+      ? "Все траты и конверты обеспечены, но часть — за счёт кредиток. Тратить сверх плана пока нельзя: минус уменьшается с каждой выплатой и процентами."
+      : "Всё запланированное уже отложено. Эти деньги можно тратить на что угодно."}</div>
   </div>
+  <h2>Откуда цифра</h2>
   <div class="card">
-    <div class="row tap" onclick="opBalance()"><div class="l">Накопительный счёт<small>нажмите, чтобы сверить с банком</small></div><div class="r">${rub(S.balance)}</div></div>
-    <div class="row tap" onclick="go('cards')"><div class="l">Кредитные деньги<small>кредитки ${rub(c.debt)} + кредит ${rub(c.loan)}</small></div><div class="r ${c.credit > 0 ? "neg" : ""}">${c.credit > 0 ? "−" + rub(c.credit) : rub(0)}</div></div>
-    <div class="row"><div class="l"><b>Собственные</b>${c.own < 0 ? "<small>минус — уже потрачено из заёмных</small>" : ""}</div><div class="r ${c.own < 0 ? "neg" : "pos"}">${rub(c.own)}</div></div>
-    ${c.other ? `<div class="row"><div class="l">С учётом других денег<small>вклады, наличные, брокерский, долги вам</small></div><div class="r ${c.own + c.other < 0 ? "neg" : ""}">${rub(c.own + c.other)}</div></div>` : ""}
-  </div>
-  <div class="card">
-    <div class="row"><div class="l"><b>Свободно сейчас</b><small>накопительный минус кредитки</small></div><div class="r">${rub(c.avail)}</div></div>
-    <div class="row tap" onclick="go('plan')"><div class="l">На регулярные траты<small>осталось до следующей выплаты</small></div><div class="r">${rub(-c.regular)}</div></div>
-    <div class="row tap" onclick="go('plan')"><div class="l">Разовые плановые траты</div><div class="r">${rub(-c.planned)}</div></div>
-    <div class="row tap" onclick="go('env')"><div class="l">Копится в конвертах</div><div class="r">${rub(-c.saved)}</div></div>
+    ${line("Накопительный счёт", S.balance, "opBalance()", "нажмите, чтобы сверить с банком")}
+    ${line("Долг по кредиткам", -c.debt, "go('cards')")}
+    ${line("Разовые траты", -c.planned, "go('plan')", "запланированные покупки")}
+    ${line("Регулярные траты", -c.regular, "go('plan')", "еда, квартира, связь… до выплаты")}
+    ${line("Конверты", -c.saved, "go('env')", "подарки, отпуск, подушка…")}
+    <div class="row"><div class="l"><b>Свободно</b></div><div class="r ${c.free < 0 ? "neg" : "pos"}"><b>${rub(c.free)}</b></div></div>
   </div>
   <div class="ops">
     <button onclick="opIncome('adv')">${ic('plus')}Аванс / зарплата</button>
-    <button onclick="opFood()">${ic('cart')}Перевёл на еду</button>
-    <button onclick="opSpend()">${ic('minus')}Расход</button>
-    <button onclick="opInterest()">${ic('pct')}Проценты</button>
-    <button onclick="opCashback()">${ic('back')}Кэшбэк</button>
+    <button onclick="opSpend()">${ic('minus')}Потратил</button>
+    <button onclick="opBuy()">${ic('bag')}Из конверта</button>
     <button onclick="opTake()">${ic('down')}Снял с кредитки</button>
     <button onclick="opRepay()">${ic('up')}Погасил кредитку</button>
-    <button onclick="opMin()">${ic('min')}Мин. платёж</button>
-    <button onclick="opBuy()">${ic('bag')}Купил из конверта</button>
-    <button onclick="opLoanPaid()">${ic('cash')}Платёж по кредиту</button>
-    <button onclick="opBalance()">${ic('check')}Сверка с банком</button>
-    <button onclick="opEnvMove()">${ic('tray')}В конверт</button>
-    <button onclick="S.loan.payment ? opPrepay() : go('more')">${ic('bolt')}Досрочно кредит</button>
+    <button onclick="opMore()">${ic('more')}Другое</button>
   </div>
-  ${foodEnv() ? `<div class="card"><div class="row tap" onclick="opFood()"><div class="l">🛒 Осталось на еду<small>до следующей выплаты · нажмите, когда переведёте на карту</small></div><div class="r ${num(foodEnv().amount) < 0 ? "neg" : ""}">${rub(foodEnv().amount)}</div></div></div>` : ""}
-  <h2>Проценты</h2>
-  <div class="card">
-    <div class="row tap" onclick="go('more')"><div class="l">Ставка сейчас<small>${S.banks.filter(b => b.on).map(b => esc(b.name) + " " + b.rate + "%").join(" + ") || "банки не заданы"}</small></div><div class="r">${String(c.rate).replace(".", ",")}%</div></div>
-    <div class="row"><div class="l">Примерный доход</div><div class="r pos">${rub(Math.round(c.perDay))}/день · ${rub(Math.round(c.perDay * 30))}/мес</div></div>
-  </div>
-  <h2>Ближайшие 14 дней</h2>
-  <div class="card">${ev.length ? ev.map(e => `<div class="row"><div class="l">${esc(e.t)}<small>${dmy(e.d)} ${pill(e.d)}</small></div><div class="r">${rub(e.s)}</div></div>`).join("") : `<div class="empty">Платежей нет</div>`}</div>
-  ${S.loan.payment ? `<div class="card"><div class="row tap" onclick="opLoanPaid()"><div class="l">${esc(S.loan.name)}<small>следующий ${dmy(loanNext())}, осталось платежей: ${S.loan.left}, долг ${rub(S.loan.principal)}</small></div><div class="r">${rub(S.loan.payment)}</div></div><div class="hint">Нажмите, когда внесёте платёж</div></div>` : ""}
-  ${S.other.length ? `<h2>Другие деньги</h2><div class="card">${S.other.map(o => `<div class="row tap" onclick="editOther('${o.id}')"><div class="l">${esc(o.name)}</div><div class="r">${rub(o.amount)}</div></div>`).join("")}<div class="row"><div class="l muted">Не входят в «можно тратить»</div><div class="r">${rub(c.other)}</div></div></div>` : ""}`;
+  <h2>Платежи на неделю</h2>
+  <div class="card">${ev.length ? ev.map(e => `<div class="row"><div class="l">${esc(e.t)}<small>${dmy(e.d)} ${pill(e.d)}</small></div><div class="r">${rub(e.s)}</div></div>`).join("") : `<div class="empty">Платежей нет</div>`}</div>`;
+}
+function opMore(){
+  const it = (f, i, t) => `<div class="row tap" onclick="closeSheet();${f}"><div class="l" style="display:flex;align-items:center;gap:12px"><span style="color:var(--acc);width:26px;height:26px;display:inline-block">${ic(i)}</span>${t}</div></div>`;
+  const el = document.getElementById("sheetIn");
+  el.innerHTML = `<div class="grab"></div><div class="sbar"><span></span><button type="button" class="tbtn b" onclick="closeSheet()">Закрыть</button></div><h3>Другие действия</h3>
+  <div class="card">${it("opFood()", "cart", "Перевёл на еду")}${it("opMin()", "min", "Минимальный платёж по кредитке")}${it("opLoanPaid()", "cash", "Платёж по кредиту")}${it("opPrepay()", "bolt", "Досрочно в кредит")}</div>
+  <div class="card">${it("opInterest()", "pct", "Пришли проценты")}${it("opCashback()", "back", "Пришёл кэшбэк")}${it("opIncome('other')", "plus", "Другой доход")}</div>
+  <div class="card">${it("opEnvMove()", "tray", "Отложить в конверт")}${it("opBalance()", "check", "Сверка с банком")}</div>`;
+  document.getElementById("sheet").classList.add("on");
 }
 function cards(){
   const c = calc();
@@ -324,7 +317,15 @@ function plan(){
   <button class="btn sec wide" onclick="editPlan()">Добавить разовую трату</button>`;
 }
 function more(){
+  const c = calc();
   return `<h1>Ещё</h1>
+  <h2>Итоги</h2>
+  <div class="card">
+    <div class="row tap" onclick="go('cards')"><div class="l">Кредитные деньги<small>кредитки ${rub(c.debt)} + кредит ${rub(c.loan)}</small></div><div class="r neg">${rub(-c.credit)}</div></div>
+    <div class="row"><div class="l">Собственные<small>накопительный минус все долги</small></div><div class="r ${c.own < 0 ? "neg" : "pos"}">${rub(c.own)}</div></div>
+    ${c.other ? `<div class="row"><div class="l">С учётом других денег<small>вклады, долги вам</small></div><div class="r ${c.own + c.other < 0 ? "neg" : "pos"}">${rub(c.own + c.other)}</div></div>` : ""}
+    <div class="row"><div class="l">Проценты по накопительному<small>${String(c.rate).replace(".", ",")}% годовых</small></div><div class="r pos">≈${rub(Math.round(c.perDay * 30))}/мес</div></div>
+  </div>
   <h2>Ставки накопительных счетов</h2>
   <div class="card">${S.banks.map(b => `<div class="row tap" onclick="editBank('${b.id}')"><div class="l">${esc(b.name)}<small>${b.on ? "начисляет" : "выключен"}</small></div><div class="r">${String(b.rate).replace(".", ",")}%</div></div>`).join("")}
   <div class="hint">Если деньги за день получают проценты в нескольких банках, включите все — ставки сложатся.</div></div>
