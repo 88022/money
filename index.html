@@ -66,9 +66,9 @@ input,select{width:100%;font:17px inherit;font-family:inherit;padding:12px;borde
 <main id="app"></main>
 <nav><div>
  <button data-t="home" class="on"><b>◉</b>Главная</button>
- <button data-t="cards"><b>▭</b>Кредитки</button>
+ <button data-t="plan"><b>☰</b>Траты</button>
  <button data-t="env"><b>✉</b>Конверты</button>
- <button data-t="plan"><b>☰</b>План</button>
+ <button data-t="cards"><b>▭</b>Кредитки</button>
  <button data-t="more"><b>⋯</b>Ещё</button>
 </div></nav>
 <div id="sheet"><div class="in" id="sheetIn"></div></div>
@@ -90,6 +90,32 @@ function load(){
   if (!S) S = blank();
   const b = blank();
   for (const k in b) if (S[k] === undefined) S[k] = b[k];
+  migrate();
+}
+function migrate(){
+  for (const e of S.envelopes) { if (!e.type) e.type = norm(e.name) === "еда" ? "spend" : "save"; if (e.cycle === undefined) e.cycle = 0; }
+}
+const isSpend = e => e.type === "spend";
+const spends = () => S.envelopes.filter(isSpend);
+const saves = () => S.envelopes.filter(e => !isSpend(e));
+function addMonths(d, m){ const w = Math.floor(m), days = Math.round((m - w) * 30); return new Date(d.getFullYear(), d.getMonth() + w, d.getDate() + days); }
+function nextDue(e){
+  const t = today(); let d = e.due ? new Date(e.due + "T00:00:00") : t;
+  do d = addMonths(d, num(e.cycle)); while (d <= t);
+  return iso(d);
+}
+// покупка по циклу закрывает его, если срок близко (до 45 дней; для коротких циклов — половина цикла), уже прошёл или не задан
+const closesCycle = e => num(e.cycle) > 0 && (!e.due || daysTo(e.due) <= Math.max(20, Math.min(45, num(e.cycle) * 15)));
+function cycleTxt(c){ c = num(c); if (!c) return ""; if (c === 12) return "раз в год"; return "каждые " + String(c).replace(".", ",") + " мес."; }
+function pace(e){
+  if (!num(e.target)) return "";
+  if (num(e.amount) >= num(e.target)) return `<span class="pill p-ok">накоплено</span>`;
+  if (!e.due) return "";
+  const m = daysTo(e.due) / 30.4;
+  if (m <= 0) return `<span class="pill p-bad">срок прошёл</span>`;
+  const need = (num(e.target) - num(e.amount)) / m;
+  if (num(e.monthly) + 1 >= need) return `<span class="pill p-ok">успевает</span>`;
+  return `<span class="pill p-warn">не успевает: нужно ≈${rub(Math.ceil(need / 50) * 50)}/мес</span>`;
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast("Не удалось сохранить"); } }
 function log(text, delta){ S.log.unshift({t: new Date().toISOString(), text, delta}); S.log = S.log.slice(0, 300); }
@@ -131,11 +157,12 @@ function calc(){
   const avail = S.balance - debt;
   const own = avail - loan;
   const env = S.envelopes.reduce((a, e) => a + num(e.amount), 0);
+  const regular = spends().reduce((a, e) => a + num(e.amount), 0);
   const planned = S.plan.reduce((a, p) => a + num(p.amount), 0);
   const rate = S.banks.filter(b => b.on).reduce((a, b) => a + num(b.rate), 0);
   const perDay = S.balance * rate / 36500;
   const other = S.other.reduce((a, o) => a + num(o.amount), 0);
-  return {debt, loan, credit: debt + loan, own, avail, env, planned, free: avail - env - planned, rate, perDay, other};
+  return {debt, loan, credit: debt + loan, own, avail, env, planned, free: avail - env - planned, regular, saved: env - regular, rate, perDay, other};
 }
 function events(days = 30){
   const out = [];
@@ -163,9 +190,9 @@ function home(){
     <button class="btn" aria-label="Записать">→</button>
   </form>
   <div class="card hero">
-    <div class="lbl">${c.free < 0 ? "Не хватает с учётом конвертов и плана" : "Можно тратить"}</div>
+    <div class="lbl">${c.free < 0 ? "Не хватает с учётом трат и конвертов" : "Можно тратить"}</div>
     <div class="big ${freeCls}">${rub(c.free < 0 ? -c.free : c.free)}</div>
-    <div class="muted">накопительный минус кредитки, конверты и план. Кредит гасится частями из зарплаты</div>
+    <div class="muted">накопительный минус кредитки, траты и конверты. Кредит гасится частями из зарплаты</div>
   </div>
   <div class="card">
     <div class="row tap" onclick="opBalance()"><div class="l">Накопительный счёт<small>нажмите, чтобы сверить с банком</small></div><div class="r">${rub(S.balance)}</div></div>
@@ -175,8 +202,9 @@ function home(){
   </div>
   <div class="card">
     <div class="row"><div class="l"><b>Свободно сейчас</b><small>накопительный минус кредитки</small></div><div class="r">${rub(c.avail)}</div></div>
-    <div class="row tap" onclick="go('env')"><div class="l">Отложено в конвертах</div><div class="r">${c.env ? "−" + rub(c.env) : rub(0)}</div></div>
-    <div class="row tap" onclick="go('plan')"><div class="l">Запланированные траты</div><div class="r">${c.planned ? "−" + rub(c.planned) : rub(0)}</div></div>
+    <div class="row tap" onclick="go('plan')"><div class="l">На регулярные траты<small>осталось до следующей выплаты</small></div><div class="r">${rub(-c.regular)}</div></div>
+    <div class="row tap" onclick="go('plan')"><div class="l">Разовые плановые траты</div><div class="r">${rub(-c.planned)}</div></div>
+    <div class="row tap" onclick="go('env')"><div class="l">Копится в конвертах</div><div class="r">${rub(-c.saved)}</div></div>
   </div>
   <div class="ops">
     <button onclick="opIncome('adv')"><b>+</b>Аванс / зарплата</button>
@@ -187,10 +215,10 @@ function home(){
     <button onclick="opTake()"><b>↓</b>Снял с кредитки</button>
     <button onclick="opRepay()"><b>↑</b>Погасил кредитку</button>
     <button onclick="opMin()"><b>⇡</b>Мин. платёж</button>
-    <button onclick="opEnvMove()"><b>✉</b>В конверт</button>
+    <button onclick="opBuy()"><b>🛍</b>Купил из конверта</button>
     <button onclick="opLoanPaid()"><b>₽</b>Платёж по кредиту</button>
     <button onclick="opBalance()"><b>✓</b>Сверка с банком</button>
-    <button onclick="go('env')"><b>☷</b>Все конверты</button>
+    <button onclick="opEnvMove()"><b>✉</b>В конверт</button>
     <button onclick="S.loan.payment ? opPrepay() : go('more')"><b>⇣</b>Досрочно кредит</button>
   </div>
   ${foodEnv() ? `<div class="card tap" onclick="opFood()"><div class="row"><div class="l">🛒 Осталось на еду<small>до следующей выплаты · нажмите, когда переведёте на карту</small></div><div class="r ${num(foodEnv().amount) < 0 ? "neg" : ""}">${rub(foodEnv().amount)}</div></div></div>` : ""}
@@ -218,27 +246,38 @@ function cards(){
   }).join("") || `<div class="card empty">Карт пока нет</div>`}
   <button class="btn wide" onclick="editCard()">Добавить карту</button>`;
 }
+const sumSh = (k, f) => shares(k, f).reduce((a, x) => a + x[1], 0);
 function env(){
-  const c = calc();
+  const c = calc(), list = saves();
   return `<h1>Конверты</h1>
-  <div class="card hero"><div class="lbl">Отложено всего</div><div class="big">${rub(c.env)}</div>
-  <div class="muted">Деньги лежат на накопительном, но уже не входят в «можно тратить»</div></div>
-  ${S.envelopes.map(e => {
-    const p = e.target ? Math.min(100, num(e.amount) / num(e.target) * 100) : 0;
+  <div class="card hero"><div class="lbl">Копится всего</div><div class="big">${rub(c.saved)}</div>
+  <div class="muted">Деньги на будущие покупки. Лежат на накопительном, но уже не входят в «можно тратить». После покупки повторяющийся конверт сам переходит на следующий срок</div></div>
+  ${list.map(e => {
+    const p = e.target ? Math.max(0, Math.min(100, num(e.amount) / num(e.target) * 100)) : 0;
     return `<div class="card tap" onclick="openEnv('${e.id}')">
-      <div class="row"><div class="l"><b>${esc(e.name)}</b><small>${e.monthly ? "+" + rub(e.monthly) + " в месяц " + SRC[e.from || ""] : "вручную"}${e.target ? " · цель " + rub(e.target) + (num(e.amount) >= num(e.target) ? " ✓" : "") : ""}${e.due ? " · к " + dmy(e.due) : ""}</small></div><div class="r">${rub(e.amount)}</div></div>
+      <div class="row"><div class="l"><b>${esc(e.name)}</b><small>${e.monthly ? "+" + rub(e.monthly) + " в месяц " + SRC[e.from || ""] : "вручную"}${cycleTxt(e.cycle) ? " · " + cycleTxt(e.cycle) : ""}${e.target ? " · цель " + rub(e.target) : ""}${e.due ? " · к " + dmy(e.due) : ""} ${pace(e)}</small></div><div class="r ${num(e.amount) < 0 ? "neg" : ""}">${rub(e.amount)}</div></div>
       ${e.target ? `<div class="bar"><i style="width:${p}%"></i></div>` : ""}</div>`;
-  }).join("") || `<div class="card empty">Создайте конверт: «Подушка», «Отпуск», «Подарки»…</div>`}
-  ${S.envelopes.some(e => e.monthly) ? `<div class="card"><div class="row"><div class="l">С аванса в конверты</div><div class="r">${rub(shares("adv").reduce((a, x) => a + x[1], 0))}</div></div><div class="row"><div class="l">С зарплаты в конверты</div><div class="r">${rub(shares("sal").reduce((a, x) => a + x[1], 0))}</div></div></div>` : ""}
-  <button class="btn wide" onclick="editEnv()">Новый конверт</button>`;
+  }).join("") || `<div class="card empty">Создайте конверт: «Подушка», «Подарки», «Отпуск»…</div>`}
+  ${list.some(e => e.monthly) ? `<div class="card"><div class="row"><div class="l">С аванса в конверты</div><div class="r">${rub(sumSh("adv", e => !isSpend(e)))}</div></div><div class="row"><div class="l">С зарплаты в конверты</div><div class="r">${rub(sumSh("sal", e => !isSpend(e)))}</div></div></div>` : ""}
+  <button class="btn wide" onclick="editEnv(null, 'save')">Новый конверт</button>`;
 }
 function plan(){
-  const c = calc();
-  return `<h1>План трат</h1>
-  <div class="card hero"><div class="lbl">Запланировано</div><div class="big">${rub(c.planned)}</div>
-  <div class="muted">Уже вычтено из «можно тратить»</div></div>
-  <div class="card">${S.plan.slice().sort((a, b) => (a.date || "9").localeCompare(b.date || "9")).map(p => `<div class="row tap" onclick="openPlan('${p.id}')"><div class="l">${esc(p.name)}<small>${p.date ? dmy(p.date) + " " + pill(p.date) : "без даты"}</small></div><div class="r">${rub(p.amount)}</div></div>`).join("") || `<div class="empty">Плановых трат нет</div>`}</div>
-  <button class="btn wide" onclick="editPlan()">Добавить трату</button>`;
+  const c = calc(), list = spends();
+  return `<h1>Траты</h1>
+  <div class="card hero"><div class="lbl">Осталось на регулярные траты</div><div class="big ${c.regular < 0 ? "neg" : ""}">${rub(c.regular)}</div>
+  <div class="muted">С каждой выплаты деньги сами раскладываются по статьям. Тратите — нажмите на статью или напишите в быстрой записи: «еда 3000»</div></div>
+  <h2>Каждый месяц</h2>
+  ${list.map(e => {
+    const p = num(e.monthly) ? Math.max(0, Math.min(100, num(e.amount) / num(e.monthly) * 100)) : 0;
+    return `<div class="card tap" onclick="openEnv('${e.id}')">
+      <div class="row"><div class="l"><b>${esc(e.name)}</b><small>${e.monthly ? rub(e.monthly) + " в месяц " + SRC[e.from || ""] : "вручную"}${num(e.amount) < 0 ? ` <span class="pill p-bad">перерасход</span>` : ""}</small></div><div class="r ${num(e.amount) < 0 ? "neg" : ""}">${rub(e.amount)}</div></div>
+      ${e.monthly ? `<div class="bar"><i style="width:${p}%"></i></div>` : ""}</div>`;
+  }).join("") || `<div class="card empty">Добавьте регулярные траты: еда, обязательные платежи…</div>`}
+  ${list.some(e => e.monthly) ? `<div class="card"><div class="row"><div class="l">С аванса на траты</div><div class="r">${rub(sumSh("adv", isSpend))}</div></div><div class="row"><div class="l">С зарплаты на траты</div><div class="r">${rub(sumSh("sal", isSpend))}</div></div></div>` : ""}
+  <button class="btn sec wide" onclick="editEnv(null, 'spend')">Новая регулярная трата</button>
+  <h2>Разовые плановые · ${rub(c.planned)}</h2>
+  <div class="card">${S.plan.slice().sort((a, b) => (a.date || "9").localeCompare(b.date || "9")).map(p => `<div class="row tap" onclick="openPlan('${p.id}')"><div class="l">${esc(p.name)}<small>${p.date ? dmy(p.date) + " " + pill(p.date) : "без даты"}</small></div><div class="r">${rub(p.amount)}</div></div>`).join("") || `<div class="empty">Разовых трат нет</div>`}</div>
+  <button class="btn sec wide" onclick="editPlan()">Добавить разовую трату</button>`;
 }
 function more(){
   return `<h1>Ещё</h1>
@@ -279,7 +318,7 @@ document.getElementById("sheet").onclick = e => { if (e.target.id === "sheet") c
 const inp = (name, lbl, val = "", type = "text", attrs = "") =>
   `<label>${lbl}</label><input name="${name}" type="${type}" value="${esc(val)}" ${type === "num" ? 'inputmode="decimal"' : ""} ${attrs}>`.replace('type="num"', 'type="text"');
 const sel = (name, lbl, opts, val) => `<label>${lbl}</label><select name="${name}">${opts.map(([v, t]) => `<option value="${v}" ${v === val ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
-const envOpts = (first) => [["", first], ...S.envelopes.map(e => [e.id, e.name + " · " + rub(e.amount)])];
+const envOpts = (first) => [["", first], ...spends().map(e => [e.id, "Трата: " + e.name + " · " + rub(e.amount)]), ...saves().map(e => [e.id, "Конверт: " + e.name + " · " + rub(e.amount)])];
 const cardOpts = () => S.cards.map(c => [c.id, c.name + " · долг " + rub(c.debt)]);
 function toast(t){ const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1800); }
 function go(t){ tab = t; render(); scrollTo(0, 0); }
@@ -287,15 +326,16 @@ function delBtn(fn){ return `<button type="button" class="btn danger wide" style
 
 // ---------- операции ----------
 const SRC = {adv: "с аванса", sal: "с зарплаты", both: "пополам с аванса и зарплаты", "": "вручную"};
-function shares(kind){
-  return S.envelopes.map(e => [e, e.from === kind ? num(e.monthly) : e.from === "both" ? num(e.monthly) / 2 : 0]).filter(x => x[1] > 0);
+function shares(kind, f){
+  return S.envelopes.filter(f || (() => true)).map(e => [e, e.from === kind ? num(e.monthly) : e.from === "both" ? num(e.monthly) / 2 : 0]).filter(x => x[1] > 0);
 }
 function opIncome(kind){
   kind = kind || "adv";
   const preview = k => { const sh = shares(k); const t = sh.reduce((a, x) => a + x[1], 0);
-    return sh.length ? `<div class="card" style="margin-top:12px">${sh.map(([e, a]) => `<div class="row"><div class="l">${esc(e.name)}</div><div class="r">${rub(a)}</div></div>`).join("")}<div class="row"><div class="l"><b>Всего в конверты</b></div><div class="r">${rub(t)}</div></div></div>` : `<div class="hint">Конвертов с суммой «в месяц» пока нет.</div>`; };
+    const part = (title, list) => list.length ? `<div class="row"><div class="l muted">${title}</div><div class="r"></div></div>` + list.map(([e, a]) => `<div class="row"><div class="l">${esc(e.name)}</div><div class="r">${rub(a)}</div></div>`).join("") : "";
+    return sh.length ? `<div class="card" style="margin-top:12px">${part("На траты", sh.filter(x => isSpend(x[0])))}${part("В конверты", sh.filter(x => !isSpend(x[0])))}<div class="row"><div class="l"><b>Всего разложится</b></div><div class="r">${rub(t)}</div></div></div>` : `<div class="hint">Статей с суммой «в месяц» пока нет.</div>`; };
   sheet("Доход", sel("k", "Что пришло", [["adv", "Аванс"], ["sal", "Зарплата"], ["other", "Другое"]], kind) + inp("s", "Сумма", "", "num") +
-    `<label class="sw">Разложить по конвертам по плану<input type="checkbox" name="split" ${kind === "other" ? "" : "checked"}></label><div id="pv">${preview(kind)}</div>`, v => {
+    `<label class="sw">Разложить по тратам и конвертам<input type="checkbox" name="split" ${kind === "other" ? "" : "checked"}></label><div id="pv">${preview(kind)}</div>`, v => {
     const s = num(v.s); if (!s) return false;
     S.balance += s;
     const name = {adv: "Аванс", sal: "Зарплата", other: "Доход"}[v.k];
@@ -303,8 +343,8 @@ function opIncome(kind){
     if (v.split && v.k !== "other") {
       const sh = shares(v.k), tot = sh.reduce((a, x) => a + x[1], 0);
       sh.forEach(([e, a]) => e.amount = num(e.amount) + a);
-      log(`${name}: в конверты ${rub(tot)}, свободно ${rub(s - tot)}`, 0);
-      toast(`В конверты ${rub(tot)}, свободно ${rub(s - tot)}`);
+      log(`${name}: на траты и в конверты ${rub(tot)}, свободно ${rub(s - tot)}`, 0);
+      toast(`Разложено ${rub(tot)}, свободно ${rub(s - tot)}`);
     } else toast("Добавлено " + rub(s));
   });
   setTimeout(() => { const k = document.querySelector("#f select[name=k]"); if (k) k.onchange = () => { document.getElementById("pv").innerHTML = preview(k.value); }; }, 0);
@@ -324,9 +364,9 @@ function opFood(){
 function opSpend(){
   sheet("Расход с накопительного", inp("s", "Сумма", "", "num") + inp("t", "На что", "") + sel("e", "Из конверта", envOpts("Из свободных денег"), ""), v => {
     const s = num(v.s); if (!s) return false;
-    S.balance -= s;
-    const e = S.envelopes.find(x => x.id === v.e); if (e) e.amount = Math.max(0, num(e.amount) - s);
-    log((v.t || "Расход") + (e ? " (из «" + e.name + "»)" : ""), -s);
+    const e = S.envelopes.find(x => x.id === v.e);
+    if (e) return void spendEnv(e, s, false, v.t);
+    S.balance -= s; log(v.t || "Расход", -s);
   });
 }
 function opInterest(){
@@ -423,8 +463,22 @@ function opPrepay(){
   }, "Погасил");
 }
 function opEnvMove(){
-  if (!S.envelopes.length) { toast("Сначала создайте конверт"); return go("env"); }
-  openEnv(S.envelopes[0].id);
+  if (!saves().length) { toast("Сначала создайте конверт"); return go("env"); }
+  openEnv(saves()[0].id, "put");
+}
+function opBuy(){
+  const l = saves(); if (!l.length) { toast("Сначала создайте конверт"); return go("env"); }
+  openEnv((l.find(e => num(e.amount) > 0) || l[0]).id, "spend");
+}
+function spendEnv(x, s, rest, note){
+  x.amount = Math.round((num(x.amount) - s) * 100) / 100; S.balance -= s;
+  log((note || (isSpend(x) ? "Потратил" : "Купил")) + ` (из «${x.name}»)`, -s);
+  let msg = x.amount < 0 ? `Перерасход «${x.name}»: ${rub(-x.amount)}` : `В «${x.name}» осталось ${rub(x.amount)}`;
+  if (!isSpend(x)) {
+    if (rest && x.amount > 0) { log(`Остаток «${x.name}» ${rub(x.amount)} → в свободные`, 0); x.amount = 0; msg = "Остаток вернулся в свободные"; }
+    if (closesCycle(x)) { x.due = nextDue(x); log(`«${x.name}»: копим к следующему разу, срок ${dmy(x.due)}`, 0); msg += ` · следующий раз к ${dmy(x.due)}`; }
+  }
+  toast(msg);
 }
 
 // ---------- редактирование ----------
@@ -440,28 +494,35 @@ function editCard(id){
     if (!id) { c.id = uid(); S.cards.push(c); }
   }, "Сохранить", id ? delBtn(`delItem('cards','${id}')`) : "");
 }
-function editEnv(id){
-  const e = S.envelopes.find(x => x.id === id) || {name: "", target: "", amount: 0, monthly: "", from: "adv", due: ""};
-  sheet(id ? "Конверт" : "Новый конверт", inp("name", "Название", e.name, "text", 'placeholder="Подушка, Отпуск, Подарки…"') +
+function editEnv(id, type){
+  const e = S.envelopes.find(x => x.id === id) || {name: "", target: "", amount: 0, monthly: "", from: "adv", due: "", type: type || "save", cycle: 0};
+  const sp = isSpend(e);
+  sheet(id ? (sp ? "Регулярная трата" : "Конверт") : (sp ? "Новая регулярная трата" : "Новый конверт"), inp("name", "Название", e.name, "text", `placeholder="${sp ? "Еда, связь, подписки…" : "Подушка, подарки, отпуск…"}"`) +
+    sel("type", "Тип", [["save", "Конверт — копится на будущую покупку"], ["spend", "Регулярная трата — расходуется каждый месяц"]], e.type) +
     `<div class="grid2"><div>${inp("monthly", "Откладывать в месяц", e.monthly || "", "num")}</div><div>${sel("from", "Откуда", Object.entries(SRC), e.from || "")}</div></div>` +
     `<div class="grid2"><div>${inp("target", "Цель (необязательно)", e.target || "", "num")}</div><div>${inp("due", "Нужно к дате", e.due || "", "date")}</div></div>` +
-    (id ? inp("amount", "Сейчас в конверте", String(e.amount).replace(".", ","), "num") : inp("amount", "Отложить сразу", "", "num")), v => {
+    inp("cycle", "Повторяется каждые … месяцев (12 — раз в год, 0 — разовая)", e.cycle || "", "num") +
+    `<div class="hint">Для конверта, который повторяется: после покупки срок сам сдвинется на следующий раз, и копить начнёт заново. Для регулярной траты цель и срок не нужны.</div>` +
+    (id ? inp("amount", sp ? "Сейчас осталось" : "Сейчас в конверте", String(e.amount).replace(".", ","), "num") : inp("amount", "Отложить сразу", "", "num")), v => {
     if (!v.name) return false;
-    e.name = v.name; e.target = num(v.target); e.monthly = num(v.monthly); e.from = v.from; e.due = v.due;
+    e.name = v.name; e.target = num(v.target); e.monthly = num(v.monthly); e.from = v.from; e.due = v.due; e.type = v.type; e.cycle = num(v.cycle);
     if (id && num(v.amount) !== num(e.amount)) { log(`Конверт «${e.name}»: исправлено ${rub(e.amount)} → ${rub(num(v.amount))}`, 0); e.amount = num(v.amount); }
     if (!id) { e.id = uid(); e.amount = num(v.amount); S.envelopes.push(e); if (e.amount) log(`В конверт «${e.name}»`, 0); }
   }, "Сохранить", id ? delBtn(`delItem('envelopes','${id}')`) : "");
 }
-function openEnv(id){
-  const e = S.envelopes.find(x => x.id === id);
-  sheet("✉ " + esc(e.name) + " · " + rub(e.amount), sel("e", "Конверт", S.envelopes.map(x => [x.id, x.name + " · " + rub(x.amount)]), id) +
-    sel("act", "Что сделать", [["put", "Отложить в конверт"], ["take", "Вернуть в свободные"], ["spend", "Потратить из конверта"]], "put") + inp("s", "Сумма", "", "num") +
-    `<div class="hint">«Отложить» не двигает деньги в банке — просто помечает их как занятые. «Потратить» уменьшает и конверт, и накопительный.</div>`, v => {
+function openEnv(id, act){
+  const e = S.envelopes.find(x => x.id === id), sp = isSpend(e), list = sp ? spends() : saves();
+  sheet((sp ? "" : "✉ ") + esc(e.name) + " · " + rub(e.amount), sel("e", sp ? "Статья" : "Конверт", list.map(x => [x.id, x.name + " · " + rub(x.amount)]), id) +
+    sel("act", "Что сделать", sp ? [["spend", "Потратил"], ["put", "Добавить сюда"], ["take", "Вернуть в свободные"]]
+                                 : [["spend", "Купил — оплатить из конверта"], ["put", "Отложить в конверт"], ["take", "Вернуть в свободные"]], act || (sp ? "spend" : "put")) +
+    inp("s", "Сумма", "", "num") + inp("t", "Комментарий (необязательно)", "") +
+    (sp ? "" : `<label class="sw">После покупки остаток вернуть в свободные<input type="checkbox" name="rest"></label>`) +
+    `<div class="hint">${sp ? "«Потратил» уменьшает и статью, и накопительный." : "«Купил» уменьшает конверт и накопительный. Если конверт повторяется и срок близко — он сам перейдёт на следующий раз. «Отложить» деньги в банке не двигает, только помечает их занятыми."}</div>`, v => {
     const x = S.envelopes.find(y => y.id === v.e), s = num(v.s); if (!s) return false;
     if (v.act === "put") { x.amount = num(x.amount) + s; log(`Отложил в «${x.name}»`, 0); }
     if (v.act === "take") { x.amount = Math.max(0, num(x.amount) - s); log(`Вернул из «${x.name}»`, 0); }
-    if (v.act === "spend") { x.amount = Math.max(0, num(x.amount) - s); S.balance -= s; log(`Потратил из «${x.name}»`, -s); }
-  }, "Готово", `<button type="button" class="btn sec wide" style="margin-top:10px" onclick="closeSheet();editEnv(document.querySelector('#f select[name=e]').value)">Переименовать / цель / удалить</button>`);
+    if (v.act === "spend") spendEnv(x, s, v.rest, v.t);
+  }, "Готово", `<button type="button" class="btn sec wide" style="margin-top:10px" onclick="closeSheet();editEnv(document.querySelector('#f select[name=e]').value)">Настроить / удалить</button>`);
 }
 function editPlan(id){
   const p = S.plan.find(x => x.id === id) || {name: "", amount: "", date: ""};
@@ -542,8 +603,8 @@ function parseQuick(q){
   const text = (m ? rawNoCard.replace(m[0], " ") : rawNoCard).trim() + (cardTxt ? " " + cardTxt : "");
   const t = text.toLowerCase().replace(/ё/g, "е");
   const has = re => re.test(t);
-  if (has(/^(аванс)/)) return {kind: "income", sub: "adv", amount, label: `Аванс ${rub(amount)} → разложить по конвертам`};
-  if (has(/^(зарплата|зп|получка)/)) return {kind: "income", sub: "sal", amount, label: `Зарплата ${rub(amount)} → разложить по конвертам`};
+  if (has(/^(аванс)/)) return {kind: "income", sub: "adv", amount, label: `Аванс ${rub(amount)} → разложить по тратам и конвертам`};
+  if (has(/^(зарплата|зп|получка)/)) return {kind: "income", sub: "sal", amount, label: `Зарплата ${rub(amount)} → разложить по тратам и конвертам`};
   if (has(/^(доход|пришло|пришли|вернули|\+)/)) return {kind: "income", sub: "other", amount, text, label: `Доход ${rub(amount)} на накопительный`};
   if (has(/^(кэшбэк|кешбэк|кэшбек|кешбек|cashback|кб)/)) {
     const card = findCard(t);
@@ -560,7 +621,7 @@ function parseQuick(q){
   if (has(/^(в |отложил|отложила|отложить)/)) { const e = findEnv(t.replace(/^(в |отложил[а]? в |отложить в |отложил[а]? )/, "")); if (e) return {kind: "put", env: e, amount, label: `Отложить в «${e.name}» ${rub(amount)}`}; }
   if (has(/^(еда|на еду|продукты|перевел на еду|перевела на еду)/)) { const e = foodEnv(); return {kind: "food", env: e, amount, label: `Перевёл на еду ${rub(amount)}` + (e ? ` (в конверте останется ${rub(num(e.amount) - amount)})` : "")}; }
   const e = findEnv(t);
-  if (e) return {kind: "spend", env: e, amount, text, label: `Расход из конверта «${e.name}»: ${rub(amount)}` + ` (останется ${rub(num(e.amount) - amount)})`};
+  if (e) return {kind: "spend", env: e, amount, text, label: `${isSpend(e) ? "Трата" : "Покупка из конверта"} «${e.name}»: ${rub(amount)} (останется ${rub(num(e.amount) - amount)})` + (!isSpend(e) && closesCycle(e) ? ` · конверт перейдёт на следующий срок ${dmy(nextDue(e))}` : "")};
   return {kind: "spend", env: null, amount, text, label: `Расход «${text || "без названия"}» ${rub(amount)} из свободных денег`};
 }
 function applyQuick(r){
@@ -568,7 +629,7 @@ function applyQuick(r){
   switch (r.kind) {
     case "income": {
       S.balance += s; const name = {adv: "Аванс", sal: "Зарплата", other: r.text || "Доход"}[r.sub]; log(name, s);
-      if (r.sub !== "other") { const sh = shares(r.sub), tot = sh.reduce((a, x) => a + x[1], 0); sh.forEach(([e, a]) => e.amount = num(e.amount) + a); log(`${name}: в конверты ${rub(tot)}, свободно ${rub(s - tot)}`, 0); }
+      if (r.sub !== "other") { const sh = shares(r.sub), tot = sh.reduce((a, x) => a + x[1], 0); sh.forEach(([e, a]) => e.amount = num(e.amount) + a); log(`${name}: на траты и в конверты ${rub(tot)}, свободно ${rub(s - tot)}`, 0); }
       break; }
     case "interest": S.balance += s; log("Проценты", s); break;
     case "cashback": applyCashback(s, r.card ? "card:" + r.card.id : "sav", ""); break;
@@ -585,7 +646,7 @@ function applyQuick(r){
     case "repay": r.card.debt = Math.round((num(r.card.debt) - s) * 100) / 100; S.balance -= s; if (num(r.card.min) > 0 && s >= num(r.card.min)) { r.card.min = 0; r.card.minDate = ""; } if (r.card.debt <= 0) r.card.due = ""; log(`Погасил «${r.card.name}»`, -s); break;
     case "put": r.env.amount = num(r.env.amount) + s; log(`Отложил в «${r.env.name}»`, 0); break;
     case "food": S.balance -= s; if (r.env) r.env.amount = num(r.env.amount) - s; log("Перевёл на еду", -s); break;
-    case "spend": S.balance -= s; if (r.env) r.env.amount = num(r.env.amount) - s; log((r.text || "Расход") + (r.env ? ` (из «${r.env.name}»)` : ""), -s); break;
+    case "spend": if (r.env) spendEnv(r.env, s, false, r.text); else { S.balance -= s; log(r.text || "Расход", -s); } break;
   }
 }
 function quickGo(q){
@@ -618,15 +679,15 @@ function importData(el){
       for (const n of d.envelopes) {
         const ex = S.envelopes.find(e => e.name.trim().toLowerCase() === n.name.trim().toLowerCase());
         if (ex) {
-          Object.assign(ex, {monthly: n.monthly ?? ex.monthly, from: n.from ?? ex.from, target: n.target || ex.target, due: n.due || ex.due});
+          Object.assign(ex, {monthly: n.monthly ?? ex.monthly, from: n.from ?? ex.from, target: n.target ?? ex.target, due: n.due ?? ex.due, type: n.type ?? ex.type, cycle: n.cycle ?? ex.cycle});
           if (n.amount !== undefined && num(n.amount) !== num(ex.amount)) { log(`Ребалансировка «${ex.name}»: ${rub(ex.amount)} → ${rub(n.amount)}`, 0); ex.amount = num(n.amount); }
           upd++;
-        } else { S.envelopes.push({id: uid(), amount: 0, ...n, amount: num(n.amount || 0)}); if (n.amount) log(`Новый конверт «${n.name}»: ${rub(n.amount)}`, 0); add++; }
+        } else { S.envelopes.push({id: uid(), type: "save", cycle: 0, ...n, amount: num(n.amount || 0)}); if (n.amount) log(`Новый конверт «${n.name}»: ${rub(n.amount)}`, 0); add++; }
       }
-      save(); render(); toast(`Конверты: добавлено ${add}, обновлено ${upd}`); return;
+      save(); render(); toast(`Траты и конверты: добавлено ${add}, обновлено ${upd}`); return;
     }
     if (typeof d.balance !== "number" || !Array.isArray(d.cards)) throw 0;
-    S = Object.assign(blank(), d); save(); render(); toast("Данные загружены");
+    S = Object.assign(blank(), d); migrate(); save(); render(); toast("Данные загружены");
   }).catch(() => toast("Это не файл копии"));
   el.value = "";
 }
