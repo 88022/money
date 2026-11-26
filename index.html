@@ -8,68 +8,91 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Мои деньги">
-<meta name="theme-color" content="#f2f5f9">
-<link rel="apple-touch-icon" href="icon-180.png?v=2">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png?v=3">
 <link rel="manifest" href="manifest.json">
 <style>
-:root{--bg:#f2f5f9;--card:#fff;--ink:#0f2742;--ink2:#5b6f86;--line:#e3e9f0;--acc:#1f6fd1;--acc-soft:#e4effc;--good:#1a8f5a;--good-soft:#e2f5ec;--bad:#d9412c;--bad-soft:#fde8e5;--warn:#b07800;--warn-soft:#fdf3dc}
-@media (prefers-color-scheme:dark){:root{--bg:#0d1520;--card:#17212e;--ink:#e8eef5;--ink2:#93a4b8;--line:#263445;--acc:#5aa2ff;--acc-soft:#1b3050;--good:#45c98a;--good-soft:#173528;--bad:#ff7a68;--bad-soft:#3d1f1b;--warn:#f0b43c;--warn-soft:#3a2e14}}
+:root{--bg:#f2f2f7;--card:#fff;--ink:#000;--ink2:rgba(60,60,67,.6);--ink3:rgba(60,60,67,.3);--line:rgba(60,60,67,.29);--fill:rgba(118,118,128,.12);--hl:rgba(0,0,0,.06);--acc:#007aff;--acc-soft:rgba(0,122,255,.12);--good:#248a3d;--good-soft:rgba(52,199,89,.16);--bad:#d70015;--bad-soft:rgba(255,59,48,.12);--warn:#c93400;--warn-soft:rgba(255,149,0,.16);--green:#34c759;--sheet:#f2f2f7;--cell2:#fff;--bar:rgba(249,249,249,.94);--tabi:#8e8e93}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--ink:#fff;--ink2:rgba(235,235,245,.6);--ink3:rgba(235,235,245,.3);--line:rgba(84,84,88,.65);--fill:rgba(118,118,128,.24);--hl:rgba(255,255,255,.08);--acc:#0a84ff;--acc-soft:rgba(10,132,255,.2);--good:#30d158;--good-soft:rgba(48,209,88,.18);--bad:#ff453a;--bad-soft:rgba(255,69,58,.18);--warn:#ff9f0a;--warn-soft:rgba(255,159,10,.18);--green:#30d158;--sheet:#1c1c1e;--cell2:#2c2c2e;--bar:rgba(22,22,24,.88);--tabi:#8e8e93}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Roboto,sans-serif}
-main{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 96px)}
-h1{font-size:28px;margin:6px 0 14px}
-h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink2);margin:22px 4px 8px;font-weight:600}
-.card{background:var(--card);border-radius:16px;padding:14px 16px;margin-bottom:10px}
-.hero{padding:18px 16px}
-.hero .lbl{color:var(--ink2);font-size:14px}
-.hero .big{font-size:36px;font-weight:700;letter-spacing:-.02em;margin:2px 0 4px}
+html{-webkit-text-size-adjust:100%}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.29 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Roboto,sans-serif}
+button,input,select{font-family:inherit;touch-action:manipulation}
+main{max-width:600px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 8px) max(16px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 49px + 32px) max(16px, env(safe-area-inset-left))}
+h1{font-size:34px;line-height:41px;font-weight:700;letter-spacing:.37px;margin:8px 0 14px}
+h2{font-size:13px;line-height:18px;text-transform:uppercase;letter-spacing:-.08px;color:var(--ink2);margin:24px 16px 7px;font-weight:400}
+.card{background:var(--card);border-radius:10px;padding:0 0 0 16px;margin-bottom:12px;overflow:hidden}
+.card>.hint{margin:12px 16px 12px 0}.card>.btns{padding:0 16px 16px 0}.card>.empty{padding:16px 16px 16px 0}
+.hero{padding:16px}
+.hero .lbl{color:var(--ink2);font-size:15px;line-height:20px}
+.hero .big{font-size:34px;line-height:41px;font-weight:700;letter-spacing:.37px;margin:2px 0 4px;font-variant-numeric:tabular-nums}
+.hero .muted{font-size:13px;line-height:18px}
 .pos{color:var(--good)}.neg{color:var(--bad)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;padding:11px 16px 11px 0;border-top:.5px solid var(--line)}
 .row:first-child{border-top:0}
-.row .l{min-width:0}.row .l small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}
-.row .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
-.tap{cursor:pointer}
-.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px}
+.row .l{min-width:0;flex:1}.row .l small{display:block;color:var(--ink2);font-size:13px;line-height:18px;margin-top:2px}
+.item .l b{font-weight:400}
+.row .r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.row.tap::after,.item.tap>.row:first-child::after{content:"";flex:none;width:8px;height:8px;border-top:2px solid var(--ink3);border-right:2px solid var(--ink3);transform:rotate(45deg);margin:0 2px 0 -4px}
+.item+.item{border-top:.5px solid var(--line)}
+.item .bar{margin:-3px 16px 12px 0}
+.tap{cursor:pointer}.tap:active,.item.tap:active{background:var(--hl)}
+.card.tap:active{background:var(--card);filter:brightness(.96)}
+.pill{display:inline-block;font-size:12px;line-height:16px;font-weight:600;padding:1px 7px;border-radius:99px;margin-left:4px;white-space:nowrap}
 .p-bad{background:var(--bad-soft);color:var(--bad)}.p-warn{background:var(--warn-soft);color:var(--warn)}.p-ok{background:var(--good-soft);color:var(--good)}
-.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
-.bar i{display:block;height:100%;background:var(--acc);border-radius:99px}
-.btn{appearance:none;border:0;border-radius:12px;padding:12px 14px;font:600 16px inherit;font-family:inherit;background:var(--acc);color:#fff;cursor:pointer}
+.bar{height:4px;background:var(--fill);border-radius:2px;overflow:hidden;margin:4px 16px 12px 0}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:2px}
+.btn{appearance:none;-webkit-appearance:none;border:0;border-radius:12px;min-height:50px;padding:0 20px;font-size:17px;font-weight:600;background:var(--acc);color:#fff;cursor:pointer}
+.btn:active{opacity:.7}
 .btn.sec{background:var(--acc-soft);color:var(--acc)}.btn.danger{background:var(--bad-soft);color:var(--bad)}
-.btn.wide{width:100%}.btns{display:flex;gap:8px;flex-wrap:wrap}.btns .btn{flex:1}
+.btn.wide{display:block;width:100%;margin:12px 0}.btns{display:flex;gap:8px;flex-wrap:wrap}.btns .btn{flex:1}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.ops button{border:0;background:var(--card);color:var(--ink);border-radius:14px;padding:12px 6px;font:600 13px inherit;font-family:inherit;cursor:pointer}
-.ops button b{display:block;font-size:20px;margin-bottom:2px}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
-nav div{display:flex;max-width:560px;width:100%}
-nav button{flex:1;border:0;background:none;color:var(--ink2);font:500 11px inherit;font-family:inherit;padding:8px 0 6px;cursor:pointer}
-nav button b{display:block;font-size:20px;line-height:1.2}
+.ops{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 4px}
+.ops button{border:0;background:var(--card);color:var(--ink);border-radius:12px;min-height:80px;padding:12px 6px 10px;font-size:12px;line-height:15px;font-weight:500;cursor:pointer}
+.ops button:active{background:var(--hl)}
+.ops svg{display:block;width:26px;height:26px;margin:0 auto 6px;color:var(--acc)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav div{display:flex;max-width:600px;width:100%;height:49px}
+nav button{flex:1;border:0;background:none;color:var(--tabi);font-size:10px;line-height:12px;font-weight:500;letter-spacing:.1px;padding:5px 0 0;cursor:pointer}
+nav svg{display:block;width:26px;height:26px;margin:0 auto 2px}
 nav button.on{color:var(--acc)}
-.muted{color:var(--ink2);font-size:14px}
-.empty{color:var(--ink2);text-align:center;padding:16px 0}
-#sheet{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;justify-content:center;z-index:9}
-#sheet.on{display:flex}
-#sheet .in{background:var(--bg);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 18px);max-height:92vh;overflow:auto}
-#sheet h3{margin:0 0 12px;font-size:20px}
-label{display:block;font-size:13px;color:var(--ink2);margin:10px 2px 4px}
-input,select{width:100%;font:17px inherit;font-family:inherit;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);-webkit-appearance:none}
-.sw{display:flex;align-items:center;justify-content:space-between}
-.sw input{width:auto;transform:scale(1.3)}
-.hint{font-size:13px;color:var(--ink2);margin:8px 2px}
-.quick{display:flex;gap:8px;margin:0 0 12px}.quick input{flex:1}.quick .btn{padding:0 18px;font-size:20px}
-.qrow{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:15px}
-.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:10}
-.toast.on{opacity:.95}
+.muted{color:var(--ink2);font-size:15px}
+.empty{color:var(--ink2);text-align:center;padding:16px 16px 16px 0;font-size:15px}
+#sheet{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;z-index:9;visibility:hidden;opacity:0;transition:opacity .25s,visibility .25s}
+#sheet.on{visibility:visible;opacity:1}
+#sheet .in{background:var(--sheet);width:100%;max-width:600px;border-radius:14px 14px 0 0;padding:0 16px calc(env(safe-area-inset-bottom) + 20px);max-height:92vh;overflow:auto;transform:translateY(100%);transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+#sheet.on .in{transform:none}
+#sheet .card{background:var(--cell2)}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--ink3);margin:6px auto 0}
+.sbar{display:flex;justify-content:space-between;align-items:center;height:44px;position:sticky;top:0;background:var(--sheet);z-index:1}
+.tbtn{border:0;background:none;color:var(--acc);font-size:17px;padding:10px 0;cursor:pointer}.tbtn.b{font-weight:600}
+#sheet h3{margin:4px 0 8px;font-size:22px;line-height:28px;font-weight:700;letter-spacing:.35px}
+label{display:block;font-size:13px;line-height:18px;color:var(--ink2);margin:16px 16px 6px}
+input,select{width:100%;font-size:17px;height:44px;padding:0 16px;border:0;border-radius:10px;background:var(--cell2);color:var(--ink);-webkit-appearance:none;appearance:none;outline:none}
+input:focus,select:focus{box-shadow:0 0 0 2px var(--acc-soft)}
+input::placeholder{color:var(--ink3)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5' fill='none' stroke='%238e8e93' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;text-overflow:ellipsis}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--cell2);border-radius:10px;min-height:44px;padding:6px 16px;margin:16px 0 0;font-size:17px;color:var(--ink)}
+input[type=checkbox]{width:51px;height:31px;flex:none;padding:0;border-radius:16px;background:var(--fill);position:relative;transition:background .2s;cursor:pointer}
+input[type=checkbox]::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:left .2s}
+input[type=checkbox]:checked{background:var(--green)}input[type=checkbox]:checked::after{left:22px}
+.hint{font-size:13px;line-height:18px;color:var(--ink2);margin:8px 16px}
+.quick{display:flex;gap:8px;margin:0 0 16px}.quick input{flex:1;height:40px;background:var(--fill);padding:0 12px}
+.quick .btn{min-height:40px;width:40px;padding:0;border-radius:20px;font-size:20px}
+.qrow{display:flex;justify-content:space-between;gap:10px;padding:12px 16px 12px 0;font-size:17px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 49px + 16px);transform:translateX(-50%);background:rgba(28,28,30,.92);color:#fff;padding:10px 18px;border-radius:99px;font-size:15px;opacity:0;transition:.25s;pointer-events:none;z-index:10;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1}
 </style>
 </head>
 <body>
 <main id="app"></main>
 <nav><div>
- <button data-t="home" class="on"><b>◉</b>Главная</button>
- <button data-t="plan"><b>☰</b>Траты</button>
- <button data-t="env"><b>✉</b>Конверты</button>
- <button data-t="cards"><b>▭</b>Кредитки</button>
- <button data-t="more"><b>⋯</b>Ещё</button>
+ <button data-t="home" class="on" data-i="home">Главная</button>
+ <button data-t="plan" data-i="list">Траты</button>
+ <button data-t="env" data-i="env">Конверты</button>
+ <button data-t="cards" data-i="card">Кредитки</button>
+ <button data-t="more" data-i="more">Ещё</button>
 </div></nav>
 <div id="sheet"><div class="in" id="sheetIn"></div></div>
 <div class="toast" id="toast"></div>
@@ -83,6 +106,27 @@ const blank = () => ({
   loan: {name: "Кредит", payment: 0, day: 1, left: 0, paid: "", principal: 0, rate: 0},
   log: []
 });
+const IC = {
+  home: '<path d="M3.5 10.2 12 3.5l8.5 6.7V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-6h-5.6v6H5A1.5 1.5 0 0 1 3.5 19z"/>',
+  list: '<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.6" cy="6.5" r="1.1" fill="currentColor"/><circle cx="4.6" cy="12" r="1.1" fill="currentColor"/><circle cx="4.6" cy="17.5" r="1.1" fill="currentColor"/>',
+  env: '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+  card: '<rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6 15h4"/>',
+  more: '<circle cx="5.5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="18.5" cy="12" r="1.4" fill="currentColor"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  cart: '<path d="M3 4h2.2l2.3 10.5h10.8L20.5 7H6.3"/><circle cx="9" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>',
+  minus: '<path d="M5 12h14"/>',
+  pct: '<path d="M18.5 5.5 5.5 18.5"/><circle cx="7.5" cy="7.5" r="2.3"/><circle cx="16.5" cy="16.5" r="2.3"/>',
+  back: '<path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.6M4 4v4.6h4.6"/>',
+  down: '<path d="M12 4v15M6 13l6 6 6-6"/>',
+  up: '<path d="M12 20V5M6 11l6-6 6 6"/>',
+  min: '<path d="M12 20V9M7 13.5l5-5 5 5M5 4.5h14"/>',
+  bag: '<path d="M5.5 8.5h13l-1 11.5h-11z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
+  cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/>',
+  check: '<path d="M5 12.5 10 17.5 19.5 7"/>',
+  tray: '<path d="M12 3.5v10M8 9.5l4 4 4-4M4 14v4.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V14"/>',
+  bolt: '<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z"/>'
+};
+const ic = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 function uid(){ return Math.random().toString(36).slice(2, 9); }
 let S, tab = "home";
 function load(){
@@ -207,29 +251,29 @@ function home(){
     <div class="row tap" onclick="go('env')"><div class="l">Копится в конвертах</div><div class="r">${rub(-c.saved)}</div></div>
   </div>
   <div class="ops">
-    <button onclick="opIncome('adv')"><b>+</b>Аванс / зарплата</button>
-    <button onclick="opFood()"><b>🛒</b>Перевёл на еду</button>
-    <button onclick="opSpend()"><b>−</b>Расход</button>
-    <button onclick="opInterest()"><b>%</b>Проценты</button>
-    <button onclick="opCashback()"><b>↺</b>Кэшбэк</button>
-    <button onclick="opTake()"><b>↓</b>Снял с кредитки</button>
-    <button onclick="opRepay()"><b>↑</b>Погасил кредитку</button>
-    <button onclick="opMin()"><b>⇡</b>Мин. платёж</button>
-    <button onclick="opBuy()"><b>🛍</b>Купил из конверта</button>
-    <button onclick="opLoanPaid()"><b>₽</b>Платёж по кредиту</button>
-    <button onclick="opBalance()"><b>✓</b>Сверка с банком</button>
-    <button onclick="opEnvMove()"><b>✉</b>В конверт</button>
-    <button onclick="S.loan.payment ? opPrepay() : go('more')"><b>⇣</b>Досрочно кредит</button>
+    <button onclick="opIncome('adv')">${ic('plus')}Аванс / зарплата</button>
+    <button onclick="opFood()">${ic('cart')}Перевёл на еду</button>
+    <button onclick="opSpend()">${ic('minus')}Расход</button>
+    <button onclick="opInterest()">${ic('pct')}Проценты</button>
+    <button onclick="opCashback()">${ic('back')}Кэшбэк</button>
+    <button onclick="opTake()">${ic('down')}Снял с кредитки</button>
+    <button onclick="opRepay()">${ic('up')}Погасил кредитку</button>
+    <button onclick="opMin()">${ic('min')}Мин. платёж</button>
+    <button onclick="opBuy()">${ic('bag')}Купил из конверта</button>
+    <button onclick="opLoanPaid()">${ic('cash')}Платёж по кредиту</button>
+    <button onclick="opBalance()">${ic('check')}Сверка с банком</button>
+    <button onclick="opEnvMove()">${ic('tray')}В конверт</button>
+    <button onclick="S.loan.payment ? opPrepay() : go('more')">${ic('bolt')}Досрочно кредит</button>
   </div>
-  ${foodEnv() ? `<div class="card tap" onclick="opFood()"><div class="row"><div class="l">🛒 Осталось на еду<small>до следующей выплаты · нажмите, когда переведёте на карту</small></div><div class="r ${num(foodEnv().amount) < 0 ? "neg" : ""}">${rub(foodEnv().amount)}</div></div></div>` : ""}
+  ${foodEnv() ? `<div class="card"><div class="row tap" onclick="opFood()"><div class="l">🛒 Осталось на еду<small>до следующей выплаты · нажмите, когда переведёте на карту</small></div><div class="r ${num(foodEnv().amount) < 0 ? "neg" : ""}">${rub(foodEnv().amount)}</div></div></div>` : ""}
   <h2>Проценты</h2>
-  <div class="card tap" onclick="go('more')">
-    <div class="row"><div class="l">Ставка сейчас<small>${S.banks.filter(b => b.on).map(b => esc(b.name) + " " + b.rate + "%").join(" + ") || "банки не заданы"}</small></div><div class="r">${String(c.rate).replace(".", ",")}%</div></div>
+  <div class="card">
+    <div class="row tap" onclick="go('more')"><div class="l">Ставка сейчас<small>${S.banks.filter(b => b.on).map(b => esc(b.name) + " " + b.rate + "%").join(" + ") || "банки не заданы"}</small></div><div class="r">${String(c.rate).replace(".", ",")}%</div></div>
     <div class="row"><div class="l">Примерный доход</div><div class="r pos">${rub(Math.round(c.perDay))}/день · ${rub(Math.round(c.perDay * 30))}/мес</div></div>
   </div>
   <h2>Ближайшие 14 дней</h2>
   <div class="card">${ev.length ? ev.map(e => `<div class="row"><div class="l">${esc(e.t)}<small>${dmy(e.d)} ${pill(e.d)}</small></div><div class="r">${rub(e.s)}</div></div>`).join("") : `<div class="empty">Платежей нет</div>`}</div>
-  ${S.loan.payment ? `<div class="card tap" onclick="opLoanPaid()"><div class="row"><div class="l">${esc(S.loan.name)}<small>следующий ${dmy(loanNext())}, осталось платежей: ${S.loan.left}, долг ${rub(S.loan.principal)}</small></div><div class="r">${rub(S.loan.payment)}</div></div><div class="hint">Нажмите, когда внесёте платёж</div></div>` : ""}
+  ${S.loan.payment ? `<div class="card"><div class="row tap" onclick="opLoanPaid()"><div class="l">${esc(S.loan.name)}<small>следующий ${dmy(loanNext())}, осталось платежей: ${S.loan.left}, долг ${rub(S.loan.principal)}</small></div><div class="r">${rub(S.loan.payment)}</div></div><div class="hint">Нажмите, когда внесёте платёж</div></div>` : ""}
   ${S.other.length ? `<h2>Другие деньги</h2><div class="card">${S.other.map(o => `<div class="row tap" onclick="editOther('${o.id}')"><div class="l">${esc(o.name)}</div><div class="r">${rub(o.amount)}</div></div>`).join("")}<div class="row"><div class="l muted">Не входят в «можно тратить»</div><div class="r">${rub(c.other)}</div></div></div>` : ""}`;
 }
 function cards(){
@@ -237,13 +281,13 @@ function cards(){
   return `<h1>Кредитки</h1>
   <div class="card hero"><div class="lbl">Общий долг</div><div class="big">${rub(c.debt)}</div>
   <div class="muted">Столько на накопительном — не ваши деньги</div></div>
-  ${S.cards.map(k => {
+  <div class="card">${S.cards.map(k => {
     const p = k.limit ? Math.max(0, Math.min(100, num(k.debt) / num(k.limit) * 100)) : 0;
-    return `<div class="card tap" onclick="editCard('${k.id}')">
+    return `<div class="item tap" onclick="editCard('${k.id}')">
       <div class="row"><div class="l"><b>${esc(k.name)}</b><small>${k.due && num(k.debt) > 0 ? "гасить до " + dmy(k.due) + " " + pill(k.due) : num(k.debt) > 0 ? "дата не указана" : num(k.debt) < 0 ? "долга нет, на карте ваши деньги" : "долга нет"}</small></div><div class="r ${num(k.debt) < 0 ? "pos" : ""}">${num(k.debt) < 0 ? "+" + rub(-k.debt) : rub(k.debt)}<small class="muted" style="display:block;font-weight:400">из ${rub(k.limit)}</small></div></div>
       ${num(k.min) > 0 && k.minDate ? `<div class="row"><div class="l">Минимальный платёж<small>до ${dmy(k.minDate)} ${pill(k.minDate)}</small></div><div class="r">${rub(k.min)}</div></div>` : ""}
       <div class="bar"><i style="width:${p}%"></i></div></div>`;
-  }).join("") || `<div class="card empty">Карт пока нет</div>`}
+  }).join("") || `<div class="empty">Карт пока нет</div>`}</div>
   <button class="btn wide" onclick="editCard()">Добавить карту</button>`;
 }
 const sumSh = (k, f) => shares(k, f).reduce((a, x) => a + x[1], 0);
@@ -252,12 +296,12 @@ function env(){
   return `<h1>Конверты</h1>
   <div class="card hero"><div class="lbl">Копится всего</div><div class="big">${rub(c.saved)}</div>
   <div class="muted">Деньги на будущие покупки. Лежат на накопительном, но уже не входят в «можно тратить». После покупки повторяющийся конверт сам переходит на следующий срок</div></div>
-  ${list.map(e => {
+  <div class="card">${list.map(e => {
     const p = e.target ? Math.max(0, Math.min(100, num(e.amount) / num(e.target) * 100)) : 0;
-    return `<div class="card tap" onclick="openEnv('${e.id}')">
+    return `<div class="item tap" onclick="openEnv('${e.id}')">
       <div class="row"><div class="l"><b>${esc(e.name)}</b><small>${e.monthly ? "+" + rub(e.monthly) + " в месяц " + SRC[e.from || ""] : "вручную"}${cycleTxt(e.cycle) ? " · " + cycleTxt(e.cycle) : ""}${e.target ? " · цель " + rub(e.target) : ""}${e.due ? " · к " + dmy(e.due) : ""} ${pace(e)}</small></div><div class="r ${num(e.amount) < 0 ? "neg" : ""}">${rub(e.amount)}</div></div>
       ${e.target ? `<div class="bar"><i style="width:${p}%"></i></div>` : ""}</div>`;
-  }).join("") || `<div class="card empty">Создайте конверт: «Подушка», «Подарки», «Отпуск»…</div>`}
+  }).join("") || `<div class="empty">Создайте конверт: «Подушка», «Подарки», «Отпуск»…</div>`}</div>
   ${list.some(e => e.monthly) ? `<div class="card"><div class="row"><div class="l">С аванса в конверты</div><div class="r">${rub(sumSh("adv", e => !isSpend(e)))}</div></div><div class="row"><div class="l">С зарплаты в конверты</div><div class="r">${rub(sumSh("sal", e => !isSpend(e)))}</div></div></div>` : ""}
   <button class="btn wide" onclick="editEnv(null, 'save')">Новый конверт</button>`;
 }
@@ -267,12 +311,12 @@ function plan(){
   <div class="card hero"><div class="lbl">Осталось на регулярные траты</div><div class="big ${c.regular < 0 ? "neg" : ""}">${rub(c.regular)}</div>
   <div class="muted">С каждой выплаты деньги сами раскладываются по статьям. Тратите — нажмите на статью или напишите в быстрой записи: «еда 3000»</div></div>
   <h2>Каждый месяц</h2>
-  ${list.map(e => {
+  <div class="card">${list.map(e => {
     const p = num(e.monthly) ? Math.max(0, Math.min(100, num(e.amount) / num(e.monthly) * 100)) : 0;
-    return `<div class="card tap" onclick="openEnv('${e.id}')">
+    return `<div class="item tap" onclick="openEnv('${e.id}')">
       <div class="row"><div class="l"><b>${esc(e.name)}</b><small>${e.monthly ? rub(e.monthly) + " в месяц " + SRC[e.from || ""] : "вручную"}${num(e.amount) < 0 ? ` <span class="pill p-bad">перерасход</span>` : ""}</small></div><div class="r ${num(e.amount) < 0 ? "neg" : ""}">${rub(e.amount)}</div></div>
       ${e.monthly ? `<div class="bar"><i style="width:${p}%"></i></div>` : ""}</div>`;
-  }).join("") || `<div class="card empty">Добавьте регулярные траты: еда, обязательные платежи…</div>`}
+  }).join("") || `<div class="empty">Добавьте регулярные траты: еда, обязательные платежи…</div>`}</div>
   ${list.some(e => e.monthly) ? `<div class="card"><div class="row"><div class="l">С аванса на траты</div><div class="r">${rub(sumSh("adv", isSpend))}</div></div><div class="row"><div class="l">С зарплаты на траты</div><div class="r">${rub(sumSh("sal", isSpend))}</div></div></div>` : ""}
   <button class="btn sec wide" onclick="editEnv(null, 'spend')">Новая регулярная трата</button>
   <h2>Разовые плановые · ${rub(c.planned)}</h2>
@@ -286,7 +330,7 @@ function more(){
   <div class="hint">Если деньги за день получают проценты в нескольких банках, включите все — ставки сложатся.</div></div>
   <button class="btn sec wide" onclick="editBank()">Добавить банк</button>
   <h2>Кредит</h2>
-  <div class="card tap" onclick="editLoan()"><div class="row"><div class="l">${esc(S.loan.name)}<small>${S.loan.payment ? S.loan.day + "-го числа, осталось " + S.loan.left + " платежей · долг " + rub(S.loan.principal) : "не задан"}</small></div><div class="r">${rub(S.loan.payment)}</div></div></div>
+  <div class="card"><div class="row tap" onclick="editLoan()"><div class="l">${esc(S.loan.name)}<small>${S.loan.payment ? S.loan.day + "-го числа, осталось " + S.loan.left + " платежей · долг " + rub(S.loan.principal) : "не задан"}</small></div><div class="r">${rub(S.loan.payment)}</div></div></div>
   ${S.loan.payment ? `<button class="btn sec wide" onclick="opPrepay()">Досрочно погасить</button>` : ""}
   <h2>Другие деньги</h2>
   <div class="card">${S.other.map(o => `<div class="row tap" onclick="editOther('${o.id}')"><div class="l">${esc(o.name)}</div><div class="r">${rub(o.amount)}</div></div>`).join("") || `<div class="empty">Вклады, наличные, долги вам</div>`}</div>
@@ -303,7 +347,8 @@ function more(){
 // ---------- окна ----------
 function sheet(title, body, onOk, okText = "Готово", extra = ""){
   const el = document.getElementById("sheetIn");
-  el.innerHTML = `<h3>${title}</h3><form id="f">${body}<div class="btns" style="margin-top:16px"><button type="button" class="btn sec" onclick="closeSheet()">Отмена</button><button class="btn">${okText}</button></div>${extra}</form>`;
+  el.innerHTML = `<div class="grab"></div><form id="f"><div class="sbar"><button type="button" class="tbtn" onclick="closeSheet()">Отмена</button><button class="tbtn b">${okText}</button></div><h3>${title}</h3>${body}<button class="btn wide" style="margin-top:20px">${okText}</button>${extra}</form>`;
+  el.scrollTop = 0;
   document.getElementById("sheet").classList.add("on");
   document.getElementById("f").onsubmit = ev => {
     ev.preventDefault();
@@ -322,7 +367,7 @@ const envOpts = (first) => [["", first], ...spends().map(e => [e.id, "Трата
 const cardOpts = () => S.cards.map(c => [c.id, c.name + " · долг " + rub(c.debt)]);
 function toast(t){ const el = document.getElementById("toast"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1800); }
 function go(t){ tab = t; render(); scrollTo(0, 0); }
-function delBtn(fn){ return `<button type="button" class="btn danger wide" style="margin-top:10px" onclick="${fn}">Удалить</button>`; }
+function delBtn(fn){ return `<button type="button" class="btn danger wide" style="margin-top:0" onclick="${fn}">Удалить</button>`; }
 
 // ---------- операции ----------
 const SRC = {adv: "с аванса", sal: "с зарплаты", both: "пополам с аванса и зарплаты", "": "вручную"};
@@ -522,7 +567,7 @@ function openEnv(id, act){
     if (v.act === "put") { x.amount = num(x.amount) + s; log(`Отложил в «${x.name}»`, 0); }
     if (v.act === "take") { x.amount = Math.max(0, num(x.amount) - s); log(`Вернул из «${x.name}»`, 0); }
     if (v.act === "spend") spendEnv(x, s, v.rest, v.t);
-  }, "Готово", `<button type="button" class="btn sec wide" style="margin-top:10px" onclick="closeSheet();editEnv(document.querySelector('#f select[name=e]').value)">Настроить / удалить</button>`);
+  }, "Готово", `<button type="button" class="btn sec wide" style="margin-top:0" onclick="closeSheet();editEnv(document.querySelector('#f select[name=e]').value)">Настроить / удалить</button>`);
 }
 function editPlan(id){
   const p = S.plan.find(x => x.id === id) || {name: "", amount: "", date: ""};
@@ -540,7 +585,7 @@ function openPlan(id){
     if (v.from === "sav") S.balance -= s;
     S.plan = S.plan.filter(x => x.id !== id);
     log("Оплачено: " + p.name, v.from === "sav" ? -s : 0);
-  }, "Оплачено", `<button type="button" class="btn sec wide" style="margin-top:10px" onclick="closeSheet();editPlan('${id}')">Изменить / удалить</button>`);
+  }, "Оплачено", `<button type="button" class="btn sec wide" style="margin-top:0" onclick="closeSheet();editPlan('${id}')">Изменить / удалить</button>`);
 }
 function editBank(id){
   const b = S.banks.find(x => x.id === id) || {name: "", rate: "", on: true};
@@ -692,7 +737,7 @@ function importData(el){
   el.value = "";
 }
 
-document.querySelectorAll("nav button").forEach(b => b.onclick = () => go(b.dataset.t));
+document.querySelectorAll("nav button").forEach(b => { b.insertAdjacentHTML("afterbegin", ic(b.dataset.i)); b.onclick = () => go(b.dataset.t); });
 load(); if (["home","cards","env","plan","more"].includes(location.hash.slice(1))) tab = location.hash.slice(1); render();
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
