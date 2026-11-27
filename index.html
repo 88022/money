@@ -104,6 +104,7 @@ const blank = () => ({
   banks: [{id: uid(), name: "Банк 1", rate: 12, on: true}],
   cards: [], plan: [], envelopes: [], other: [],
   loan: {name: "Кредит", payment: 0, day: 1, left: 0, paid: "", principal: 0, rate: 0},
+  pay: {adv: 0, sal: 0},
   log: []
 });
 const IC = {
@@ -160,6 +161,36 @@ function pace(e){
   const need = (num(e.target) - num(e.amount)) / m;
   if (num(e.monthly) + 1 >= need) return `<span class="pill p-ok">успевает</span>`;
   return `<span class="pill p-warn">не успевает: нужно ≈${rub(Math.ceil(need / 50) * 50)}/мес</span>`;
+}
+// ---------- план выхода: дыра → подушка → свободные траты ----------
+const cushion = () => S.envelopes.find(e => !isSpend(e) && norm(e.name) === "подушка");
+function exitPlan(){
+  const c = calc(), mon = S.envelopes.reduce((a, e) => a + (e.from ? num(e.monthly) : 0), 0);
+  const income = num(S.pay.adv) + num(S.pay.sal);
+  const left = income ? income - mon : 0;                       // остаётся с выплат за месяц
+  const interest = Math.max(0, (S.balance - c.planned) * c.rate / 1200); // проценты без денег на разовые траты
+  const perMonth = left + interest;
+  const cu = cushion(), cuNeed = cu && num(cu.target) ? Math.max(0, num(cu.target) - num(cu.amount)) : 0;
+  const stage = c.free < 0 ? 1 : cuNeed > 0 ? 2 : 3;
+  const months = x => perMonth > 0 ? Math.ceil(x / perMonth) : 0;
+  return {c, income, mon, left, interest, perMonth, cu, cuNeed, stage, holeM: months(Math.max(0, -c.free)), cuM: months(cuNeed)};
+}
+function whenTxt(m){ if (!m) return ""; const d = addMonths(today(), m); return "≈ " + d.toLocaleDateString("ru-RU", {month: "long", year: "numeric"}); }
+// после выплаты или процентов: если дыра закрыта — свободное уходит в подушку
+function autoCushion(max){
+  const cu = cushion(); if (!cu || !num(cu.target)) return 0;
+  const free = calc().free, a = Math.floor(Math.min(max, free, num(cu.target) - num(cu.amount)));
+  if (a <= 0) return 0;
+  cu.amount = num(cu.amount) + a; log(`В подушку (дыра закрыта) ${rub(a)}`, 0); return a;
+}
+function exitCard(){
+  const x = exitPlan(); if (!x.income) return "";
+  const st = (n, t, sub, v) => `<div class="row"><div class="l">${x.stage > n ? "✓ " : x.stage === n ? "→ " : ""}${x.stage === n ? `<b>${t}</b>` : t}<small>${sub}</small></div><div class="r">${v}</div></div>`;
+  return `<h2>План выхода</h2><div class="card">
+    ${st(1, "1. Закрыть дыру", x.stage > 1 ? "закрыта" : `${rub(x.left, true)} с выплат + ≈${rub(Math.round(x.interest))} проценты в месяц · ${whenTxt(x.holeM)}`, x.stage > 1 ? "" : rub(x.c.free))}
+    ${st(2, "2. Подушка", x.cu ? `${rub(x.cu.amount)} из ${rub(x.cu.target)}${x.stage === 2 ? " · " + whenTxt(x.cuM) : ""} · остаток с выплат пойдёт сюда сам` : "создайте конверт «Подушка» с целью", x.stage >= 2 && x.cuNeed ? rub(-x.cuNeed) : "")}
+    ${st(3, "3. Свободные траты", "вернуть урезанное: поездку, одежду, подарки", "")}
+  </div>`;
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) { toast("Не удалось сохранить"); } }
 function log(text, delta){ S.log.unshift({t: new Date().toISOString(), text, delta}); S.log = S.log.slice(0, 300); }
@@ -240,6 +271,7 @@ function home(){
       ? "Все траты и конверты обеспечены, но часть — за счёт кредиток. Тратить сверх плана пока нельзя: минус уменьшается с каждой выплатой и процентами."
       : "Всё запланированное уже отложено. Эти деньги можно тратить на что угодно."}</div>
   </div>
+  ${exitCard()}
   <h2>Откуда цифра</h2>
   <div class="card">
     ${line("Накопительный счёт", S.balance, "opBalance()", "нажмите, чтобы сверить с банком")}
@@ -312,11 +344,20 @@ function plan(){
       <div class="row"><div class="l"><b>${esc(e.name)}</b><small>${e.monthly ? rub(e.monthly) + " в месяц " + SRC[e.from || ""] : "вручную"}${num(e.amount) < 0 ? ` <span class="pill p-bad">перерасход</span>` : ""}</small></div><div class="r ${num(e.amount) < 0 ? "neg" : ""}">${rub(e.amount)}</div></div>
       ${e.monthly ? `<div class="bar"><i style="width:${p}%"></i></div>` : ""}</div>`;
   }).join("") || `<div class="empty">Добавьте регулярные траты: еда, обязательные платежи…</div>`}</div>
-  ${list.some(e => e.monthly) ? `<div class="card"><div class="row"><div class="l">С аванса на траты</div><div class="r">${rub(sumSh("adv", isSpend))}</div></div><div class="row"><div class="l">С зарплаты на траты</div><div class="r">${rub(sumSh("sal", isSpend))}</div></div></div>` : ""}
+  ${distCard()}
   <button class="btn sec wide" onclick="editEnv(null, 'spend')">Новая регулярная трата</button>
   <h2>Разовые плановые · ${rub(c.planned)}</h2>
   <div class="card">${S.plan.slice().sort((a, b) => (a.date || "9").localeCompare(b.date || "9")).map(p => `<div class="row tap" onclick="openPlan('${p.id}')"><div class="l">${esc(p.name)}<small>${p.date ? dmy(p.date) + " " + pill(p.date) : "без даты"}</small></div><div class="r">${rub(p.amount)}</div></div>`).join("") || `<div class="empty">Разовых трат нет</div>`}</div>
   <button class="btn sec wide" onclick="editPlan()">Добавить разовую трату</button>`;
+}
+function distCard(){
+  const x = exitPlan(), go3 = x.stage === 1 ? "На закрытие дыры" : x.stage === 2 ? "В подушку" : "Свободно";
+  const col = k => { const inc = num(S.pay[k]), t = sumSh(k, isSpend), e = sumSh(k, e => !isSpend(e)), r = inc - t - e;
+    return `<div class="row"><div class="l muted">${k === "adv" ? "Аванс" : "Зарплата"}</div><div class="r">${inc ? rub(inc) : "сумма появится после первой записи"}</div></div>
+    <div class="row"><div class="l">Траты</div><div class="r">${rub(-t)}</div></div>
+    <div class="row"><div class="l">Конверты</div><div class="r">${rub(-e)}</div></div>
+    ${inc ? `<div class="row"><div class="l"><b>${go3}</b></div><div class="r ${r < 0 ? "neg" : "pos"}"><b>${rub(r, true)}</b></div></div>` : ""}`; };
+  return S.envelopes.some(e => e.monthly) ? `<h2>Как делится выплата</h2><div class="card">${col("adv")}</div><div class="card">${col("sal")}</div>` : "";
 }
 function more(){
   const c = calc();
@@ -388,11 +429,13 @@ function opIncome(kind){
     S.balance += s;
     const name = {adv: "Аванс", sal: "Зарплата", other: "Доход"}[v.k];
     log(name, s);
+    if (v.k !== "other") S.pay[v.k] = s;
     if (v.split && v.k !== "other") {
       const sh = shares(v.k), tot = sh.reduce((a, x) => a + x[1], 0);
       sh.forEach(([e, a]) => e.amount = num(e.amount) + a);
-      log(`${name}: на траты и в конверты ${rub(tot)}, свободно ${rub(s - tot)}`, 0);
-      toast(`Разложено ${rub(tot)}, свободно ${rub(s - tot)}`);
+      const cu = autoCushion(s - tot);
+      log(`${name}: на траты и в конверты ${rub(tot)}, ${cu ? "в подушку " + rub(cu) : "на закрытие дыры " + rub(s - tot)}`, 0);
+      toast(`Разложено ${rub(tot)}, ${cu ? "в подушку " + rub(cu) : "на дыру " + rub(s - tot)}`);
     } else toast("Добавлено " + rub(s));
   });
   setTimeout(() => { const k = document.querySelector("#f select[name=k]"); if (k) k.onchange = () => { document.getElementById("pv").innerHTML = preview(k.value); }; }, 0);
@@ -421,6 +464,7 @@ function opInterest(){
   sheet("Пришли проценты", inp("s", "Сумма", "", "num") + sel("b", "Банк", S.banks.map(b => [b.name, b.name]), S.banks[0]?.name), v => {
     const s = num(v.s); if (!s) return false;
     S.balance += s; log("Проценты " + (v.b || ""), s);
+    const cu = autoCushion(s); toast(cu ? "В подушку " + rub(cu) : "Минус уменьшился на " + rub(s));
   });
 }
 function opCashback(){
@@ -732,6 +776,7 @@ function importData(el){
           upd++;
         } else { S.envelopes.push({id: uid(), type: "save", cycle: 0, ...n, amount: num(n.amount || 0)}); if (n.amount) log(`Новый конверт «${n.name}»: ${rub(n.amount)}`, 0); add++; }
       }
+      if (d.pay) S.pay = Object.assign({adv: 0, sal: 0}, S.pay, d.pay);
       save(); render(); toast(`Траты и конверты: добавлено ${add}, обновлено ${upd}`); return;
     }
     if (typeof d.balance !== "number" || !Array.isArray(d.cards)) throw 0;
